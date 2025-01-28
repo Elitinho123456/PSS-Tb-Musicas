@@ -4,26 +4,53 @@ Wellington Ribeiro Lara
 João Gabriel Silveira Costa
 Gustavo dos Santos Bezerra
 
-Tema: Songs/Musica
+Tema: Streaming de Músicas/"Songs"
 */
 
 import { fastify } from "fastify";
-import { dataBase } from "./dataBaseMemory.js";
+import { dataBaseMemory } from "./dataBaseMemory.js";
 import { request } from "http";
 
 const server = fastify();
 
-dataBase = new DatabaseMemory();
+const dataBase = new dataBaseMemory();
 
 
-server.get('/musicas', (request)=>{
+server.get('/songs', (request) => {
     const search = request.query.search;
 
-    const musicas = dataBase.list(search);
+    const songs = dataBase.list(search);
 
-    return musicas;
+    return songs;
 });
 
-server.post('/musicas', (request, reply) =>{
-    const { nome, autor, compositor,  }
+server.post('/songs', (request, reply) => {
+    const { nome, autor, compositor, álbum, estilo, produtor } = request.body;
+
+    dataBase.create({
+        nome: nome,
+        autor: autor,
+        compositor: compositor,
+        álbum: álbum,
+        estilo: estilo,
+        produtor: produtor
+    });
+
+    return reply.status(201).send();
+});
+
+server.put('/songs/:id', (request, reply) => {
+    return reply.status(204).send()
+});
+
+server.patch('/songs/:id', (request, reply) => {
+    return reply.status(204).send()
+});
+
+server.delete('/songs/:id', (request,reply) => {
+    return reply.status(204).send()
+});
+
+server.listen({
+    port: 3333,
 });

@@ -4,7 +4,8 @@
   "description": "server_base and data_base",
   "main": "index.js",
   "scripts": {
-    "test": "run"
+    "test": "run",
+    "dev": "node --watch --no-warnings index.js"
   },
   "repository": {
     "type": "git",

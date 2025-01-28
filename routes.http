@@ -1,0 +1,15 @@
+POST http://localhost:3333/songs
+Content-Type: application/json
+
+{
+    "nome": "Primavera",
+    "autor": "Yung Lixo",
+    "compositor": "Yung Lixo/Yun Li/MC VV",
+    "álbum": "13 Lentes de um Final Feliz",
+    "estilo": "Trap, sentimental",
+    "produtor": "Biffe"
+}
+
+###
+
+GET http://localhost:3333/songs
