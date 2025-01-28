@@ -1,0 +1,22 @@
+{
+  "name": "server_side",
+  "version": "0.0.1",
+  "description": "server_base and data_base",
+  "main": "index.js",
+  "scripts": {
+    "test": "run"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Elitinho123456/Server_Side_Tb.git"
+  },
+  "author": "Elitinho",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Elitinho123456/Server_Side_Tb/issues"
+  },
+  "homepage": "https://github.com/Elitinho123456/Server_Side_Tb#readme",
+  "dependencies": {
+    "fastify": "^5.2.1"
+  }
+}
