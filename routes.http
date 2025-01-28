@@ -13,3 +13,35 @@ Content-Type: application/json
 ###
 
 GET http://localhost:3333/songs
+
+###
+
+GET http://localhost:3333/songs?search=Primavera
+
+###
+
+PUT http://localhost:3333/songs/
+Content-Type: application/json
+
+{
+    "nome": "Waiting to Fly!",
+    "autor": "Yung Lixo",
+    "compositor": "Yun Li",
+    "álbum": "Valiation",
+    "estilo": "Trap, sentimental",
+    "produtor": "Biffe & Hakuro"
+}
+
+
+###
+
+PATCH http://localhost:3333/songs/
+Content-Type: application/json
+
+{
+    "nome": "I Walk"
+}
+
+###
+
+DELETE http://localhost:3333/songs/

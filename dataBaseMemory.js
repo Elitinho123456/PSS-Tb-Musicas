@@ -24,22 +24,22 @@ export class dataBaseMemory{
         
     .filter(song => {
         if(search){
-            return song.nome.includes(search);
+            return song.nome.includes(search)
         };
         return true;
     });
     };
 
     create(song){
-        const songID = randomUUID()
+        const songID = randomUUID();
         this.#songs.set(songID, song);
     };
 
     update(id, song){
-        this.#songs.set(id, song);
+        this.#songs.set(id, song)
     };
 
     delete(id){
-        this.#songs.delete(id); 
+        this.#songs.delete(id)
     };
 };
