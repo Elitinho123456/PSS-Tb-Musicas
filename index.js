@@ -9,124 +9,148 @@ Tema: Streaming de Músicas/"Songs"
 
 */
 
-import { fastify } from "fastify"; // Importa o framework Fastify para criar o servidor
-import { dataBaseMemory } from "./dataBaseMemory.js"; // Importa a classe dataBaseMemory do arquivo dataBaseMemory.js, responsável pela manipulação dos dados em memória
+import dotenv from 'dotenv';
+dotenv.config();
+import { fastify } from "fastify";
+import { neon } from "@neondatabase/serverless";
 
-const server = fastify(); // Cria uma instância do servidor Fastify
+const server = fastify();
+const sql = neon(process.env.DATABASE_URL);
 
-const dataBase = new dataBaseMemory(); // Cria uma instância da classe dataBaseMemory, inicializando o "banco de dados" em memória
+// Criação da tabela (executar uma vez)
 
-// Rota GET /songs: Retorna a lista de músicas
-server.get('/songs', (request) => {
+await sql`
+  CREATE TABLE IF NOT EXISTS songs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    nome TEXT NOT NULL,
+    autor TEXT NOT NULL,
+    compositor TEXT NOT NULL,
+    album TEXT,
+    estilo TEXT,
+    produtor TEXT,
+    created_at TIMESTAMP DEFAULT NOW()
+  )
+`;
+
+
+// Rotas
+server.get("/songs", async (request) => {
     try {
+        const { search } = request.query;
+        let query = sql`SELECT * FROM songs`;
 
-        const search = request.query.search; // Obtém o parâmetro de busca "search" da query string da requisição
-        const songs = dataBase.list(search); // Chama o método list da classe dataBaseMemory para obter a lista de músicas, filtrada pelo parâmetro de busca (se fornecido)
+        if (search) {
+            query = sql`${query} WHERE nome ILIKE ${"%" + search + "%"}`;
+        }
 
-        return songs; // Retorna a lista de músicas como resposta
-
+        const result = await query;
+        return result;
     } catch (error) {
-
-        console.error("Error in GET /songs:", error); // Imprime o erro no console para depuração
-        return { error: "Failed to retrieve songs." }; // Retorna um objeto com a mensagem de erro
-
+        console.error("Error in GET /songs:", error);
+        return { error: "Failed to retrieve songs." };
     }
 });
 
-// Rota POST /songs: Cria uma nova música
-server.post('/songs', (request, reply) => {
+server.post("/songs", async (request, reply) => {
     try {
+        const { nome, autor, compositor, álbum, estilo, produtor } = request.body;
 
-        const { nome, autor, compositor, álbum, estilo, produtor } = request.body; // Obtém os dados da música do corpo da requisição
+        await sql`
+      INSERT INTO songs (nome, autor, compositor, album, estilo, produtor)
+      VALUES (${nome}, ${autor}, ${compositor}, ${álbum}, ${estilo}, ${produtor})
+    `;
 
-        dataBase.create({ // Chama o método create da classe dataBaseMemory para criar a nova música
-            nome,
-            autor,
-            compositor,
-            álbum,
-            estilo,
-            produtor
+        return reply.status(201).send();
+    } catch (error) {
+        console.error("Error in POST /songs:", error);
+        return reply.status(500).send({ error: "Failed to create song." });
+    }
+});
+
+server.put("/songs/:id", async (request, reply) => {
+    try {
+        const songId = request.params.id;
+        const { nome, autor, compositor, álbum, estilo, produtor } = request.body;
+
+        await sql`
+      UPDATE songs
+      SET 
+        nome = ${nome},
+        autor = ${autor},
+        compositor = ${compositor},
+        album = ${álbum},
+        estilo = ${estilo},
+        produtor = ${produtor}
+      WHERE id = ${songId}
+    `;
+
+        return reply.status(204).send();
+    } catch (error) {
+        console.error("Error in PUT /songs/:id:", error);
+        return reply.status(500).send({ error: "Failed to update song." });
+    }
+});
+
+server.patch('/songs/:id', async (request, reply) => {
+    try {
+        const songId = request.params.id;
+        const updateFields = request.body;
+
+        if (!updateFields || Object.keys(updateFields).length === 0) {
+            return reply.status(400).send({ error: "No fields to update." });
+        }
+
+        // Construir cláusulas SET manualmente
+        const setClauses = [];
+        const values = [];
+        let paramIndex = 1;
+
+        for (const [key, value] of Object.entries(updateFields)) {
+            setClauses.push(`${key} = $${paramIndex}`);
+            values.push(value);
+            paramIndex++;
+        }
+
+        // Usar query raw com parâmetros seguros
+        await sql(`
+        UPDATE songs
+        SET ${setClauses.join(', ')}
+        WHERE id = $${paramIndex}
+      `, [...values, songId]);
+
+        return reply.status(204).send();
+    } catch (error) {
+        console.error("Error in PATCH /songs/:id:", error);
+        return reply.status(500).send({
+            error: "Failed to update song.",
+            details: error.message
         });
-
-        return reply.status(201).send(); // Retorna uma resposta com status 201 (Created) indicando sucesso na criação
-
-    } catch (error) {
-
-        console.error("Error in POST /songs:", error); // Imprime o erro no console para depuração
-        return reply.status(500).send({ error: "Failed to create song." }); // Retorna uma resposta com status 500 (Internal Server Error) e a mensagem de erro
-
     }
 });
 
-// Rota PUT /songs/:id: Atualiza uma música existente
-server.put('/songs/:id', (request, reply) => {
+server.delete("/songs/:id", async (request, reply) => {
     try {
+        const songId = request.params.id;
 
-        const songId = request.params.id; // Obtém o ID da música da URL
-        const { nome, autor, compositor, álbum, estilo, produtor } = request.body; // Obtém os dados da música do corpo da requisição
+        await sql`
+      DELETE FROM songs
+      WHERE id = ${songId}
+    `;
 
-        const song = dataBase.update(songId, { // Chama o método update da classe dataBaseMemory para atualizar a música
-            nome,
-            autor,
-            compositor,
-            álbum,
-            estilo,
-            produtor
-        });
-
-        return reply.status(204).send(); // Retorna uma resposta com status 204 (No Content) indicando sucesso na atualização
-
+        return reply.status(204).send({ message: "Song deleted." });
     } catch (error) {
-
-        console.error("Error in PUT /songs/:id:", error); // Imprime o erro no console para depuração
-        return reply.status(500).send({ error: "Failed to update song." }); // Retorna uma resposta com status 500 (Internal Server Error) e a mensagem de erro
-
+        console.error("Error in DELETE /songs/:id:", error);
+        return reply.status(500).send({ error: "Failed to delete song." });
     }
 });
 
-// Rota PATCH /songs/:id: Atualiza parcialmente uma música existente
-server.patch('/songs/:id', (request, reply) => {
-    try {
-
-        const songId = request.params.id; // Obtém o ID da música da URL
-        const update = request.body; // Obtém os dados da música do corpo da requisição, que serão usados para atualização parcial
-
-        const OnMusics = dataBase.getById(songId); // Obtém a música pelo ID
-        if (!OnMusics) { // Verifica se a música foi encontrada
-            return reply.status(404).send({ message: 'Music not found.' }); // Retorna status 404 se a música não foi encontrada
-        };
-
-        const upMusics = { ...OnMusics, ...update }; // Cria um novo objeto com os dados da música original e os dados de atualização
-
-        dataBase.update(songId, upMusics); // Chama o método update para atualizar a música com os dados combinados
-
-        return reply.status(204).send(); // Retorna uma resposta com status 204 (No Content) indicando sucesso na atualização
-
-    } catch (error) {
-
-        console.error("Error in PUT /songs/:id:", error); // Imprime o erro no console para depuração
-        return reply.status(500).send({ error: "Failed to update song." }); // Retorna uma resposta com status 500 (Internal Server Error) e a mensagem de erro
-
-    }
-});
-
-// Rota DELETE /songs/:id: Deleta uma música existente
-server.delete('/songs/:id', (request, reply) => {
-    try {
-
-        const songId = request.params.id; // Obtém o ID da música da URL
-        const deleted = dataBase.delete(songId); // Chama o método delete da classe dataBaseMemory para deletar a música
-
-        return reply.status(204).send({ message: "Song deleted." }); // Retorna uma resposta com status 204 (No Content) indicando sucesso na exclusão
-
-    } catch (error) {
-
-        console.error("Error in DELETE /songs/:id:", error); // Imprime o erro no console para depuração
-        return reply.status(500).send({ error: "Failed to delete song." }); // Retorna uma resposta com status 500 (Internal Server Error) e a mensagem de erro
-
-    }
-});
-
-server.listen({ // Inicia o servidor na porta 3333
+server.listen({
     port: 3333,
+    host: "0.0.0.0",
+}, (err) => {
+    if (err) {
+        console.error(err);
+        process.exit(1);
+    }
+    console.log("Server running at http://localhost:3333");
 });
